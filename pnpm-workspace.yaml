@@ -1,0 +1,7 @@
+allowBuilds:
+  active-win: set this to true or false
+  better-sqlite3: true
+  electron: true
+  electron-winstaller: true
+  esbuild: true
+  get-windows: true
