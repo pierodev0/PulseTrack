@@ -2,6 +2,7 @@
   import { onMount, onDestroy } from 'svelte'
   import AppList from './AppList.svelte'
   import TimerDisplay from './TimerDisplay.svelte'
+  import Dashboard from './Dashboard.svelte'
   import History from './History.svelte'
   import EditModal from './EditModal.svelte'
   import Settings from './Settings.svelte'
@@ -216,6 +217,14 @@
           Temporizador
         </button>
         <button
+          onclick={() => { currentTab = 'dashboard'; loadStats() }}
+          class="text-sm font-medium transition-colors cursor-pointer"
+          class:text-zinc-100={currentTab === 'dashboard'}
+          class:text-zinc-500={currentTab !== 'dashboard'}
+        >
+          Dashboard
+        </button>
+        <button
           onclick={() => { currentTab = 'history' }}
           class="text-sm font-medium transition-colors cursor-pointer"
           class:text-zinc-100={currentTab === 'history'}
@@ -260,6 +269,8 @@
           Reiniciar
         </button>
       </div>
+    {:else if currentTab === 'dashboard'}
+      <Dashboard />
     {:else if currentTab === 'history'}
       <History onedit={handleEdit} ondelete={handleDelete} />
     {:else}
