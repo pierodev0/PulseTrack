@@ -11,7 +11,7 @@ export interface TimerTick {
   elapsed: number
   running: boolean
   lapCount: number
-  laps: Array<{ number: number; label: string; duration: number }>
+  laps: Array<{ number: number; label: string; duration: number; startedAt: string }>
 }
 
 export interface TimerState {
@@ -33,13 +33,14 @@ let sessionId: number | null = null
 let blockId: number | null = null
 let lapCount = 0
 let lastLapStart = 0
-let laps: Array<{ blockId: number; label: string; duration: number }> = []
+let laps: Array<{ blockId: number; label: string; duration: number; startedAt: string }> = []
 
-function getLapsInfo(): Array<{ number: number; label: string; duration: number }> {
+function getLapsInfo(): Array<{ number: number; label: string; duration: number; startedAt: string }> {
   return laps.map((l, i) => ({
     number: i + 1,
     label: l.label,
-    duration: l.duration
+    duration: l.duration,
+    startedAt: l.startedAt
   }))
 }
 
@@ -81,7 +82,7 @@ export function startTimer(appName: string): void {
 
   const block = createBlock(sessionId, appName, 'Lap 1', null, 'manual', now)
   blockId = block.id
-  laps.push({ blockId: block.id, label: 'Lap 1', duration: 0 })
+  laps.push({ blockId: block.id, label: 'Lap 1', duration: 0, startedAt: now })
   lastLapStart = 0
 
   if (intervalId) clearInterval(intervalId)
@@ -127,7 +128,7 @@ export function lapTimer(): void {
 
   const block = createBlock(sessionId, selectedAppName!, `Lap ${lapCount + 1}`, null, 'manual', now)
   blockId = block.id
-  laps.push({ blockId: block.id, label: `Lap ${lapCount + 1}`, duration: 0 })
+  laps.push({ blockId: block.id, label: `Lap ${lapCount + 1}`, duration: 0, startedAt: now })
   lastLapStart = elapsed
 
   emitTick()

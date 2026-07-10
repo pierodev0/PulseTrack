@@ -19,6 +19,9 @@ const api = {
   renameLap: (lapIndex: number, label: string) =>
     ipcRenderer.invoke('timer:rename-lap', lapIndex, label),
 
+  renameBlock: (blockId: number, label: string) =>
+    ipcRenderer.invoke('block:rename', blockId, label),
+
   saveSession: (data: { appName: string; duration: number }) => ipcRenderer.invoke('db:save', data),
 
   getHistory: (limit?: number) => ipcRenderer.invoke('db:history', limit),
@@ -117,6 +120,9 @@ const api = {
 
   setSessionLabel: (appName: string, label: string) =>
     ipcRenderer.invoke('session:set-label', appName, label),
+
+  renameSession: (sessionId: number, newName: string) =>
+    ipcRenderer.invoke('session:rename', sessionId, newName),
 
   getTitleRules: () => ipcRenderer.invoke('title-rules:get'),
 

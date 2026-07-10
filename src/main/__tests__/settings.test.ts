@@ -26,6 +26,7 @@ describe('settings', () => {
     expect(s.customColors.bg).toBe('#1e1e2e')
     expect(s.customColors.text).toBe('#ffffff')
     expect(s.customColors.border).toBe('#334155')
+    expect(s.pipFontSize).toEqual({ time: 24, label: 11, appName: 9 })
   })
 
   it('setSettings merges partial values', () => {
@@ -33,6 +34,17 @@ describe('settings', () => {
     expect(result.pipStyle).toBe('dark')
     // customColors should still be defaults
     expect(result.customColors.bg).toBe('#1e1e2e')
+    // pipFontSize should still be defaults
+    expect(result.pipFontSize).toEqual({ time: 24, label: 11, appName: 9 })
+  })
+
+  it('setSettings merges pipFontSize', () => {
+    const result = setSettings({ pipFontSize: { time: 28, label: 13, appName: 10 } })
+    expect(result.pipFontSize.time).toBe(28)
+    expect(result.pipFontSize.label).toBe(13)
+    expect(result.pipFontSize.appName).toBe(10)
+    // pipStyle should still be defaults
+    expect(result.pipStyle).toBe('transparent')
   })
 
   it('setSettings persists to disk', () => {

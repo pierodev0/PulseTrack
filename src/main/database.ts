@@ -230,6 +230,10 @@ export function reopenSession(id: number): void {
   db.prepare('UPDATE app_sessions SET end_time = NULL, status = ? WHERE id = ?').run('active', id)
 }
 
+export function renameSession(id: number, newName: string): void {
+  db.prepare('UPDATE app_sessions SET app_name = ? WHERE id = ?').run(newName, id)
+}
+
 export function getActiveSessions(): AppSession[] {
   return db.prepare('SELECT * FROM app_sessions WHERE status = ?').all('active') as AppSession[]
 }

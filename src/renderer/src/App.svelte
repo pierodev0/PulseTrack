@@ -2,25 +2,26 @@
   import { onMount, onDestroy } from 'svelte'
   import AppList from './AppList.svelte'
   import TimerDisplay from './TimerDisplay.svelte'
+  import LapList from './LapList.svelte'
   import Dashboard from './Dashboard.svelte'
-  import History from './History.svelte'
-  import EditModal from './EditModal.svelte'
+  import Analytics from './Analytics.svelte'
   import Settings from './Settings.svelte'
   import {
     getState,
     setElapsed,
     setRunning,
     setSelectedApp,
-    setHistory,
     setStats,
     setPipActive,
     setPipStyle,
     setCustomColors,
+    setPipFontSize,
     setHeartbeatActive,
     setHeartbeatTick,
     setTimerTick,
     PIP_STYLES
   } from './timerStore.svelte.ts'
+  import type { PipFontSize } from './timerStore.svelte.ts'
   import type { WindowInfo } from '../../main/window-detector'
   import type { HeartbeatTick } from '../../main/heartbeat'
   import Play from '@lucide/svelte/icons/play'
@@ -30,14 +31,12 @@
   import PictureInPicture2 from '@lucide/svelte/icons/picture-in-picture-2'
 
   let apps = $state<WindowInfo[]>([])
-  let selectedHistoryItem = $state<{ id: number; duration_seconds: number } | null>(null)
-  let showEditModal = $state(false)
   let cleanupTick: (() => void) | null = null
   let cleanupSettings: (() => void) | null = null
   let cleanupFocus: (() => void) | null = null
   let cleanupMode: (() => void) | null = null
   let cleanupHeartbeat: (() => void) | null = null
-  let currentTab = $state<'timer' | 'history' | 'settings' | 'dashboard'>('timer')
+  let currentTab = $state<'timer' | 'analytics' | 'settings' | 'dashboard'>('timer')
 
   const isPipMode = $derived(getState().pipActive)
 
@@ -72,41 +71,13 @@
     const result = await window.electronAPI.stopTimer()
     setRunning(false)
     if (result.session) {
-      await loadHistory()
       await loadStats()
     }
-  }
-
-  async function loadHistory(): Promise<void> {
-    const h = await window.electronAPI.getHistory()
-    setHistory(h)
   }
 
   async function loadStats(): Promise<void> {
     const s = await window.electronAPI.getStats()
     setStats(s)
-  }
-
-  function handleEdit(item: { id: number; duration_seconds: number }): void {
-    selectedHistoryItem = item
-    showEditModal = true
-  }
-
-  async function handleSaveEdit(durationSeconds: number): Promise<void> {
-    if (!selectedHistoryItem) return
-    await window.electronAPI.editRecord({
-      id: selectedHistoryItem.id,
-      durationSeconds
-    })
-    showEditModal = false
-    selectedHistoryItem = null
-    await loadHistory()
-  }
-
-  async function handleDelete(id: number): Promise<void> {
-    await window.electronAPI.deleteRecord(id)
-    await loadHistory()
-    await loadStats()
   }
 
   async function handleLap(): Promise<void> {
@@ -140,12 +111,12 @@
       s.pipStyle as 'transparent' | 'dark' | 'light' | 'green' | 'blue' | 'amber' | 'custom'
     )
     setCustomColors(s.customColors)
+    setPipFontSize(s.pipFontSize ?? { time: 24, label: 11, appName: 9 })
   }
 
   onMount(() => {
     loadSettings()
     loadApps()
-    loadHistory()
     loadStats()
     checkPipStatus()
 
@@ -153,12 +124,14 @@
       const d = data as {
         pipStyle?: string
         customColors?: { bg: string; text: string; border: string }
+        pipFontSize?: PipFontSize
       }
       if (d.pipStyle)
         setPipStyle(
           d.pipStyle as 'transparent' | 'dark' | 'light' | 'green' | 'blue' | 'amber' | 'custom'
         )
       if (d.customColors) setCustomColors(d.customColors)
+      if (d.pipFontSize) setPipFontSize(d.pipFontSize as PipFontSize)
     })
 
     cleanupTick = window.electronAPI.onTimerTick((data) => {
@@ -173,7 +146,6 @@
       setPipActive(isPip)
       if (!isPip) {
         loadApps()
-        loadHistory()
         loadStats()
       }
     })
@@ -211,12 +183,12 @@
   >
     <div
       style="-webkit-app-region: drag"
-      class="flex flex-col items-center justify-center w-full h-full px-3 py-2"
+      class="flex flex-col items-center justify-center w-full h-full px-2 py-1"
     >
       <TimerDisplay pip />
 
       <div
-        class="flex items-center gap-3 mt-1"
+        class="flex items-center gap-2"
         style="-webkit-app-region: no-drag"
         class:opacity-80={getState().pipStyle !== 'custom'}
       >
@@ -302,13 +274,13 @@
         </button>
         <button
           onclick={() => {
-            currentTab = 'history'
+            currentTab = 'analytics'
           }}
           class="text-sm font-medium transition-colors cursor-pointer"
-          class:text-zinc-100={currentTab === 'history'}
-          class:text-zinc-500={currentTab !== 'history'}
+          class:text-zinc-100={currentTab === 'analytics'}
+          class:text-zinc-500={currentTab !== 'analytics'}
         >
-          Historial
+          Estad&iacute;sticas
         </button>
         <button
           onclick={() => {
@@ -372,10 +344,13 @@
           {getState().heartbeat.currentApp ?? 'Esperando...'}
         </div>
       {/if}
+      <div class="mt-4">
+        <LapList />
+      </div>
     {:else if currentTab === 'dashboard'}
       <Dashboard />
-    {:else if currentTab === 'history'}
-      <History onedit={handleEdit} ondelete={handleDelete} />
+    {:else if currentTab === 'analytics'}
+      <Analytics />
     {:else}
       <Settings />
     {/if}
@@ -384,13 +359,3 @@
   </div>
 {/if}
 
-{#if showEditModal && selectedHistoryItem}
-  <EditModal
-    duration={selectedHistoryItem.duration_seconds}
-    onsave={handleSaveEdit}
-    onclose={() => {
-      showEditModal = false
-      selectedHistoryItem = null
-    }}
-  />
-{/if}

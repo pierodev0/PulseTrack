@@ -4,10 +4,11 @@
     getState,
     setPipStyle,
     setCustomColors,
+    setPipFontSize,
     PIP_STYLES,
     PIP_STYLE_LIST
   } from './timerStore.svelte.ts'
-  import type { PipStyle, CustomColors } from './timerStore.svelte.ts'
+  import type { PipStyle, CustomColors, PipFontSize } from './timerStore.svelte.ts'
 
   const state = $derived(getState())
 
@@ -59,6 +60,12 @@
 
   function saveCustom(): void {
     save({ pipStyle: 'custom', customColors: state.customColors })
+  }
+
+  function handleFontSize(key: keyof PipFontSize, value: number): void {
+    const next = { ...state.pipFontSize, [key]: value }
+    setPipFontSize(next)
+    save({ pipFontSize: next })
   }
 
   async function save(partial: Record<string, unknown>): Promise<void> {
@@ -238,13 +245,16 @@
           class="flex flex-col items-center justify-center py-3 px-4 select-none"
           style="color: {state.customColors.text};"
         >
-          <span class="font-mono font-bold tabular-nums" style="font-size: 22px; line-height: 1;">
+          <span
+            class="font-mono font-bold tabular-nums"
+            style="font-size: {state.pipFontSize.time}px; line-height: 1;"
+          >
             01:23:45
           </span>
           <div class="flex items-center gap-3 mt-1" style="opacity: 0.8;">
-            <span style="font-size: 11px;">▶</span>
-            <span style="font-size: 11px;">■</span>
-            <span style="font-size: 11px;">⊞</span>
+            <span style="font-size: {state.pipFontSize.label}px;">Retoque</span>
+            <span style="font-size: {state.pipFontSize.label}px;">&middot; 12:30</span>
+            <span style="font-size: {state.pipFontSize.label}px;">▶ ■ ⊞</span>
           </div>
         </div>
       </div>
@@ -258,6 +268,43 @@
       </button>
     </div>
   {/if}
+
+  <div class="space-y-3 pt-2 border-t border-zinc-800">
+    <h3 class="text-xs font-medium text-zinc-500 uppercase tracking-wide">
+      Tama&ntilde;os de texto
+    </h3>
+
+    <!-- Time font size -->
+    <div class="flex items-center justify-between">
+      <span class="text-xs text-zinc-400">Tiempo</span>
+      <div class="flex items-center gap-1">
+        {#each [20, 24, 28, 32] as size (size)}
+          <button
+            onclick={() => handleFontSize('time', size)}
+            class="px-2 py-1 text-xs rounded transition-colors {state.pipFontSize.time === size
+              ? 'bg-sky-600 text-white'
+              : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}">{size}px</button
+          >
+        {/each}
+      </div>
+    </div>
+
+    <!-- Label font size -->
+    <div class="flex items-center justify-between">
+      <span class="text-xs text-zinc-400">Etiquetas (app, lap)</span>
+      <div class="flex items-center gap-1">
+        {#each [9, 11, 13] as size (size)}
+          <button
+            onclick={() => handleFontSize('label', size)}
+            class="px-2 py-1 text-xs rounded transition-colors {state.pipFontSize.label === size
+              ? 'bg-sky-600 text-white'
+              : 'bg-zinc-700 text-zinc-300 hover:bg-zinc-600'}">{size}px</button
+          >
+        {/each}
+      </div>
+    </div>
+  </div>
+
   <!-- Title cleaning rules section -->
   <div class="pt-4 border-t border-zinc-800 space-y-3">
     <h2 class="text-xs font-medium text-zinc-400 uppercase tracking-wide">

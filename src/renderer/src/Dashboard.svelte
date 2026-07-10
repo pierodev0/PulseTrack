@@ -19,6 +19,20 @@
   let labelInputVisible = $state(false)
   let cleanupTick: (() => void) | null = null
 
+  let editingBlockId = $state<number | null>(null)
+  let blockEditValue = $state('')
+  let blockEditInput: HTMLInputElement | undefined = $state()
+
+  let editingSessionId = $state<number | null>(null)
+  let sessionEditValue = $state('')
+  let sessionEditInput: HTMLInputElement | undefined = $state()
+
+  function formatTimeOfDay(isoString: string): string {
+    if (!isoString) return ''
+    const d = new Date(isoString)
+    return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+  }
+
   function formatDuration(seconds: number): string {
     const h = Math.floor(seconds / 3600)
     const m = Math.floor((seconds % 3600) / 60)
@@ -109,6 +123,70 @@
     labelInputVisible = true
   }
 
+  function startBlockEdit(blockId: number, currentLabel: string): void {
+    editingBlockId = blockId
+    blockEditValue = currentLabel
+    queueMicrotask(() => blockEditInput?.focus())
+  }
+
+  async function commitBlockEdit(): Promise<void> {
+    const id = editingBlockId
+    if (id === null) return
+    editingBlockId = null
+    if (!blockEditValue.trim()) return
+    await window.electronAPI.renameBlock(id, blockEditValue.trim())
+    await loadSessionList()
+  }
+
+  function cancelBlockEdit(): void {
+    editingBlockId = null
+  }
+
+  let editingActiveSessionId = $state<number | null>(null)
+  let activeSessionEditValue = $state('')
+  let activeSessionEditInput: HTMLInputElement | undefined = $state()
+
+  function startSessionEdit(sessionId: number, currentName: string): void {
+    editingSessionId = sessionId
+    sessionEditValue = currentName
+    queueMicrotask(() => sessionEditInput?.focus())
+  }
+
+  async function commitSessionEdit(): Promise<void> {
+    const id = editingSessionId
+    if (id === null) return
+    editingSessionId = null
+    if (!sessionEditValue.trim()) return
+    await window.electronAPI.renameSession(id, sessionEditValue.trim())
+    await loadSessionList()
+  }
+
+  function cancelSessionEdit(): void {
+    editingSessionId = null
+  }
+
+  function startActiveSessionEdit(sessionId: number, currentName: string): void {
+    editingActiveSessionId = sessionId
+    activeSessionEditValue = currentName
+    queueMicrotask(() => activeSessionEditInput?.focus())
+  }
+
+  async function commitActiveSessionEdit(): Promise<void> {
+    const id = editingActiveSessionId
+    if (id === null) return
+    editingActiveSessionId = null
+    if (!activeSessionEditValue.trim()) return
+    await window.electronAPI.renameSession(id, activeSessionEditValue.trim())
+    await loadSessionList()
+    // Refresh active session tick
+    const active = await window.electronAPI.getActiveSession()
+    if (active) setSessionTick(active)
+  }
+
+  function cancelActiveSessionEdit(): void {
+    editingActiveSessionId = null
+  }
+
   onMount(() => {
     loadHeartbeatStats()
     loadSessionList()
@@ -181,11 +259,30 @@
       <!-- Active session card -->
       <div class="bg-zinc-800/50 rounded-lg p-3 border border-zinc-800 border-l-green-500 mb-3">
         <div class="flex items-center justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-            <span class="text-sm font-medium text-zinc-200">{activeSessionData.appName}</span>
+          <div class="flex items-center gap-2 min-w-0">
+            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse shrink-0"></span>
+            {#if editingActiveSessionId === activeSessionData.sessionId}
+              <input
+                bind:this={activeSessionEditInput}
+                bind:value={activeSessionEditValue}
+                onkeydown={(e) => {
+                  if (e.key === 'Enter') commitActiveSessionEdit()
+                  if (e.key === 'Escape') cancelActiveSessionEdit()
+                }}
+                onblur={commitActiveSessionEdit}
+                class="flex-1 min-w-0 bg-zinc-900 border border-sky-500 rounded px-1.5 py-0.5 text-sm text-zinc-200 outline-none"
+              />
+            {:else}
+              <button
+                onclick={() => startActiveSessionEdit(activeSessionData.sessionId, activeSessionData.appName)}
+                class="text-sm font-medium text-zinc-200 hover:text-zinc-100 cursor-pointer text-left truncate"
+                title="Renombrar sesión"
+              >
+                {activeSessionData.appName}
+              </button>
+            {/if}
           </div>
-          <span class="text-sm font-mono text-zinc-300"
+          <span class="text-sm font-mono text-zinc-300 shrink-0 ml-2"
             >{formatTimeCompact(activeSessionData.sessionDuration)}</span
           >
         </div>
@@ -241,15 +338,37 @@
         {#each recentSessions as session (session.id)}
           <div class="bg-zinc-800/50 rounded-lg border border-zinc-800 overflow-hidden">
             <!-- Session header (collapsible) -->
-            <button
-              onclick={() => toggleSession(session.id)}
-              class="w-full flex items-center justify-between px-3 py-2 text-left cursor-pointer hover:bg-zinc-800 transition-colors"
+            <div
+              class="w-full flex items-center justify-between px-3 py-2 hover:bg-zinc-800 transition-colors"
             >
               <div class="flex items-center gap-2 min-w-0">
-                <span class="text-xs text-zinc-500 shrink-0"
-                  >{expandedSessionIds.includes(session.id) ? '▾' : '▸'}</span
+                <button
+                  onclick={() => toggleSession(session.id)}
+                  class="text-xs text-zinc-500 shrink-0 cursor-pointer hover:text-zinc-300"
+                  title={expandedSessionIds.includes(session.id) ? 'Contraer' : 'Expandir'}
                 >
-                <span class="text-sm font-medium text-zinc-200 truncate">{session.app_name}</span>
+                  {expandedSessionIds.includes(session.id) ? '▾' : '▸'}
+                </button>
+                {#if editingSessionId === session.id}
+                  <input
+                    bind:this={sessionEditInput}
+                    bind:value={sessionEditValue}
+                    onkeydown={(e) => {
+                      if (e.key === 'Enter') commitSessionEdit()
+                      if (e.key === 'Escape') cancelSessionEdit()
+                    }}
+                    onblur={commitSessionEdit}
+                    class="flex-1 min-w-0 bg-zinc-900 border border-sky-500 rounded px-1.5 py-0.5 text-sm text-zinc-200 outline-none"
+                  />
+                {:else}
+                  <button
+                    onclick={() => startSessionEdit(session.id, session.app_name)}
+                    class="text-sm font-medium text-zinc-200 hover:text-zinc-100 cursor-pointer text-left truncate"
+                    title="Renombrar sesión"
+                  >
+                    {session.app_name}
+                  </button>
+                {/if}
               </div>
               <div class="flex items-center gap-2 shrink-0">
                 <span class="text-xs font-mono text-zinc-300"
@@ -259,7 +378,7 @@
                   >· {session.blocks.length} bloque{session.blocks.length !== 1 ? 's' : ''}</span
                 >
               </div>
-            </button>
+            </div>
 
             <!-- Blocks (shown when expanded) -->
             {#if expandedSessionIds.includes(session.id)}
@@ -271,12 +390,32 @@
                         <span class="text-zinc-500 shrink-0"
                           >{block.source === 'manual' ? '🖊️' : '📄'}</span
                         >
-                        <span class="text-zinc-300 truncate">{block.label || 'Sin título'}</span>
+                        {#if editingBlockId === block.id}
+                          <input
+                            bind:this={blockEditInput}
+                            bind:value={blockEditValue}
+                            onkeydown={(e) => {
+                              if (e.key === 'Enter') commitBlockEdit()
+                              if (e.key === 'Escape') cancelBlockEdit()
+                            }}
+                            onblur={commitBlockEdit}
+                            class="flex-1 min-w-0 bg-zinc-900 border border-sky-500 rounded px-1.5 py-0.5 text-xs text-zinc-200 outline-none"
+                          />
+                        {:else}
+                          <button
+                            onclick={() => startBlockEdit(block.id, block.label || '')}
+                            class="text-zinc-300 hover:text-zinc-100 cursor-pointer text-left truncate"
+                            title="Renombrar"
+                          >
+                            {block.label || 'Sin título'}
+                          </button>
+                        {/if}
                         <span class="text-zinc-600 text-[10px] shrink-0">({block.source})</span>
                       </div>
-                      <span class="font-mono text-zinc-400 shrink-0 ml-2"
-                        >{formatTimeCompact(block.duration_seconds)}</span
-                      >
+                      <div class="flex items-center gap-2 shrink-0 ml-2">
+                        <span class="font-mono text-zinc-500 text-[10px]">{formatTimeOfDay(block.start_time)}</span>
+                        <span class="font-mono text-zinc-400">{formatTimeCompact(block.duration_seconds)}</span>
+                      </div>
                     </div>
                   {/each}
                 </div>
@@ -292,46 +431,6 @@
     {:else if !state.session.loading && !activeSessionData}
       <p class="text-xs text-zinc-600 italic mb-3">
         Sin sesiones. Los datos aparecer&aacute;n cuando haya actividad.
-      </p>
-    {/if}
-  </div>
-
-  <div>
-    <h2 class="text-xs font-medium text-zinc-400 uppercase tracking-wide mb-3">
-      Temporizador manual
-    </h2>
-
-    {#if sessionStats.length > 0}
-      <div class="space-y-3">
-        {#each sessionStats as stat (stat.app_name)}
-          <div class="bg-zinc-800/50 rounded-lg p-3 border border-zinc-800">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-sm font-medium text-zinc-200">{stat.app_name}</span>
-              <span class="text-sm font-mono text-zinc-300"
-                >{formatDuration(stat.total_seconds)}</span
-              >
-            </div>
-            <div class="flex items-center gap-3">
-              <div class="flex-1 h-2 bg-zinc-700 rounded-full overflow-hidden">
-                <div
-                  class="h-full bg-emerald-500 rounded-full transition-all"
-                  style="width: {barWidth(stat.total_seconds, totalSessionSeconds)}"
-                ></div>
-              </div>
-              <span class="text-xs text-zinc-500 w-16 text-right"
-                >{stat.session_count} sesiones</span
-              >
-            </div>
-          </div>
-        {/each}
-      </div>
-
-      <div class="text-xs text-zinc-500 pt-2 border-t border-zinc-800">
-        Total: {formatDuration(totalSessionSeconds)} &middot; {sessionStats.length} apps
-      </div>
-    {:else}
-      <p class="text-xs text-zinc-600 italic">
-        Sin datos. Inicia un temporizador para ver estad&iacute;sticas.
       </p>
     {/if}
   </div>

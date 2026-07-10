@@ -197,7 +197,7 @@ describe('timer', () => {
       elapsed: 0,
       running: true,
       lapCount: 0,
-      laps: [{ number: 1, label: 'Lap 1', duration: 0 }]
+      laps: [{ number: 1, label: 'Lap 1', duration: 0, startedAt: expect.any(String) }]
     })
 
     pauseTimer()
@@ -205,7 +205,7 @@ describe('timer', () => {
       elapsed: 0,
       running: false,
       lapCount: 0,
-      laps: [{ number: 1, label: 'Lap 1', duration: 0 }]
+      laps: [{ number: 1, label: 'Lap 1', duration: 0, startedAt: expect.any(String) }]
     })
 
     stopTimer()

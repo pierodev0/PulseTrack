@@ -15,6 +15,12 @@ export interface CustomColors {
   border: string
 }
 
+export interface PipFontSize {
+  time: number
+  label: number
+  appName: number
+}
+
 export const PIP_STYLES: Record<Exclude<PipStyle, 'custom'>, PipStyleConfig> = {
   transparent: {
     bg: 'bg-transparent',
@@ -122,6 +128,7 @@ export interface LapInfo {
   number: number
   label: string
   duration: number
+  startedAt: string
 }
 
 export interface TimerStore {
@@ -133,6 +140,7 @@ export interface TimerStore {
   pipActive: boolean
   pipStyle: PipStyle
   customColors: CustomColors
+  pipFontSize: PipFontSize
   heartbeat: HeartbeatState
   session: SessionState
   lapCount: number
@@ -148,6 +156,7 @@ let state = $state<TimerStore>({
   pipActive: false,
   pipStyle: 'transparent',
   customColors: { bg: '#1e1e2e', text: '#ffffff', border: '#334155' },
+  pipFontSize: { time: 24, label: 11, appName: 9 },
   heartbeat: {
     active: false,
     currentApp: null,
@@ -217,6 +226,10 @@ export function setPipStyle(style: PipStyle): void {
 
 export function setCustomColors(colors: CustomColors): void {
   state.customColors = colors
+}
+
+export function setPipFontSize(size: PipFontSize): void {
+  state.pipFontSize = size
 }
 
 export function setLapCount(n: number): void {

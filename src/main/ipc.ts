@@ -15,10 +15,12 @@ import {
   getHistory,
   updateSession,
   deleteSession,
+  renameSession,
   getStats,
   getHeartbeatStats,
   getHeartbeatTimeline,
-  getRecentSessions
+  getRecentSessions,
+  renameBlock as dbRenameBlock
 } from './database'
 import {
   startHeartbeatWatcher,
@@ -140,6 +142,11 @@ export function registerIpcHandlers(): void {
     return { success: true }
   })
 
+  ipcMain.handle('session:rename', (_event, sessionId: number, newName: string) => {
+    renameSession(sessionId, newName)
+    return { success: true }
+  })
+
   ipcMain.handle('session:list', (_event, limit?: number, appName?: string) => {
     return getRecentSessions(limit, appName)
   })
@@ -151,6 +158,11 @@ export function registerIpcHandlers(): void {
   // Title rules handlers
   ipcMain.handle('title-rules:get', () => {
     return getSettings()?.titleRules ?? getDefaultRules()
+  })
+
+  ipcMain.handle('block:rename', (_event, blockId: number, label: string) => {
+    dbRenameBlock(blockId, label)
+    return { success: true }
   })
 
   ipcMain.handle(

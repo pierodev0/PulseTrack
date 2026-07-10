@@ -10,15 +10,23 @@ export interface CustomColors {
   border: string
 }
 
+export interface PipFontSize {
+  time: number
+  label: number
+  appName: number
+}
+
 export interface AppSettings {
   pipStyle: string
   customColors: CustomColors
+  pipFontSize: PipFontSize
   titleRules: Record<string, TitleRule[]>
 }
 
 const defaults: AppSettings = {
   pipStyle: 'transparent',
   customColors: { bg: '#1e1e2e', text: '#ffffff', border: '#334155' },
+  pipFontSize: { time: 24, label: 11, appName: 9 },
   titleRules: {}
 }
 
