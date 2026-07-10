@@ -67,8 +67,62 @@ export const PIP_STYLES: Record<Exclude<PipStyle, 'custom'>, PipStyleConfig> = {
 }
 
 export const PIP_STYLE_LIST: PipStyle[] = [
-  'transparent', 'dark', 'light', 'green', 'blue', 'amber', 'custom'
+  'transparent',
+  'dark',
+  'light',
+  'green',
+  'blue',
+  'amber',
+  'custom'
 ]
+
+export interface ActiveSession {
+  appName: string
+  sessionId: number
+  sessionDuration: number
+  blockId: number
+  blockLabel: string
+  blockSource: 'auto' | 'manual'
+  blockDuration: number
+}
+
+export interface SessionListItem {
+  app_name: string
+  id: number
+  start_time: string
+  end_time: string | null
+  duration_seconds: number
+  status: string
+  blocks: Array<{
+    id: number
+    label: string
+    source: 'auto' | 'manual'
+    duration_seconds: number
+    start_time: string
+    end_time: string | null
+  }>
+}
+
+export interface SessionState {
+  active: ActiveSession | null
+  recentSessions: SessionListItem[]
+  loading: boolean
+}
+
+export interface HeartbeatState {
+  active: boolean
+  currentApp: string | null
+  currentTitle: string | null
+  lastTimestamp: string | null
+  appChanged: boolean
+  titleChanged: boolean
+}
+
+export interface LapInfo {
+  number: number
+  label: string
+  duration: number
+}
 
 export interface TimerStore {
   elapsed: number
@@ -79,6 +133,10 @@ export interface TimerStore {
   pipActive: boolean
   pipStyle: PipStyle
   customColors: CustomColors
+  heartbeat: HeartbeatState
+  session: SessionState
+  lapCount: number
+  laps: LapInfo[]
 }
 
 let state = $state<TimerStore>({
@@ -89,8 +147,41 @@ let state = $state<TimerStore>({
   stats: [],
   pipActive: false,
   pipStyle: 'transparent',
-  customColors: { bg: '#1e1e2e', text: '#ffffff', border: '#334155' }
+  customColors: { bg: '#1e1e2e', text: '#ffffff', border: '#334155' },
+  heartbeat: {
+    active: false,
+    currentApp: null,
+    currentTitle: null,
+    lastTimestamp: null,
+    appChanged: false,
+    titleChanged: false
+  },
+  session: {
+    active: null,
+    recentSessions: [],
+    loading: false
+  },
+  lapCount: 0,
+  laps: []
 })
+
+export function setHeartbeatActive(active: boolean): void {
+  state.heartbeat.active = active
+}
+
+export function setHeartbeatTick(data: {
+  app_name: string
+  window_title: string | null
+  timestamp: string
+  app_changed: boolean
+  title_changed: boolean
+}): void {
+  state.heartbeat.currentApp = data.app_name
+  state.heartbeat.currentTitle = data.window_title
+  state.heartbeat.lastTimestamp = data.timestamp
+  state.heartbeat.appChanged = data.app_changed
+  state.heartbeat.titleChanged = data.title_changed
+}
 
 export function getState(): TimerStore {
   return state
@@ -126,6 +217,38 @@ export function setPipStyle(style: PipStyle): void {
 
 export function setCustomColors(colors: CustomColors): void {
   state.customColors = colors
+}
+
+export function setLapCount(n: number): void {
+  state.lapCount = n
+}
+
+export function setLaps(laps: LapInfo[]): void {
+  state.laps = laps
+}
+
+export function setTimerTick(data: {
+  elapsed: number
+  running: boolean
+  lapCount: number
+  laps: LapInfo[]
+}): void {
+  state.elapsed = data.elapsed
+  state.running = data.running
+  state.lapCount = data.lapCount
+  state.laps = data.laps
+}
+
+export function setSessionTick(data: ActiveSession): void {
+  state.session.active = { ...data }
+}
+
+export function setRecentSessions(sessions: SessionListItem[]): void {
+  state.session.recentSessions = sessions
+}
+
+export function setSessionLoading(loading: boolean): void {
+  state.session.loading = loading
 }
 
 export function resetTimer(): void {

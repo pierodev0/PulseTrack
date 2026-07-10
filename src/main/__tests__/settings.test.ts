@@ -5,6 +5,7 @@ import { tmpdir } from 'os'
 import { app } from 'electron'
 
 import { initSettings, getSettings, setSettings } from '../settings'
+import type { TitleRule } from '../title-cleaner'
 
 describe('settings', () => {
   let testDir: string
@@ -65,5 +66,55 @@ describe('settings', () => {
     // simulate fresh init (new test dir)
     initSettings()
     expect(getSettings().pipStyle).toBe('green')
+  })
+
+  describe('titleRules', () => {
+    it('defaults to empty object', () => {
+      const s = getSettings()
+      expect(s.titleRules).toEqual({})
+    })
+
+    it('can set and retrieve title rules', () => {
+      const myRules: Record<string, TitleRule[]> = {
+        photoshop: [{ pattern: '^(.+?)\\s+@.*$', replacement: '$1', enabled: true }]
+      }
+      const result = setSettings({ titleRules: myRules })
+      expect(result.titleRules.photoshop).toHaveLength(1)
+      expect(result.titleRules.photoshop[0].pattern).toBe('^(.+?)\\s+@.*$')
+    })
+
+    it('persists titleRules to disk', () => {
+      const myRules: Record<string, TitleRule[]> = {
+        code: [{ pattern: '^(.+?)\\s*[-–].*$', replacement: '$1', enabled: true }]
+      }
+      setSettings({ titleRules: myRules })
+
+      // re-init to read from disk
+      initSettings()
+      const s = getSettings()
+      expect(s.titleRules.code).toBeDefined()
+      expect(s.titleRules.code[0].enabled).toBe(true)
+    })
+
+    it('merges titleRules with other settings', () => {
+      const result = setSettings({
+        pipStyle: 'dark',
+        titleRules: { krita: [{ pattern: 'test', replacement: 'x', enabled: false }] }
+      })
+      expect(result.pipStyle).toBe('dark')
+      expect(result.titleRules.krita).toHaveLength(1)
+    })
+
+    it('overwrites existing titleRules on set', () => {
+      setSettings({
+        titleRules: { app1: [{ pattern: 'a', replacement: 'b', enabled: true }] }
+      })
+      setSettings({
+        titleRules: { app2: [{ pattern: 'c', replacement: 'd', enabled: true }] }
+      })
+      const s = getSettings()
+      expect(s.titleRules.app1).toBeUndefined()
+      expect(s.titleRules.app2).toBeDefined()
+    })
   })
 })

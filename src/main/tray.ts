@@ -3,10 +3,7 @@ import { join } from 'path'
 
 let tray: Tray | null = null
 
-export function createTray(
-  onShow: () => void,
-  onQuit: () => void
-): void {
+export function createTray(onShow: () => void, onQuit: () => void): void {
   const iconPath = join(__dirname, '../../resources/icon.png')
   const icon = nativeImage.createFromPath(iconPath)
   tray = new Tray(icon)

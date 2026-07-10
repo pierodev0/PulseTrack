@@ -8,6 +8,11 @@ import { registerIpcHandlers } from './ipc'
 import { createTray, destroyTray, updateTrayTooltip } from './tray'
 import { setMainWindow } from './pip'
 import { onTick } from './timer'
+import { stopHeartbeatWatcher } from './heartbeat'
+import { initSessionManager, shutdownSessionManager, onSessionTick } from './session-manager'
+import { createTitleCleaner, getDefaultRules } from './title-cleaner'
+import { getSettings } from './settings'
+import { sendToAllWindows } from './pip'
 
 let mainWindow: BrowserWindow | null = null
 let isQuitting = false
@@ -62,12 +67,10 @@ function createWindow(): void {
     () => app.quit()
   )
 
-  onTick((elapsed, running) => {
-    const mins = Math.floor(elapsed / 60)
-    const secs = Math.floor(elapsed % 60)
-    updateTrayTooltip(
-      running ? `${mins}m ${secs}s` : 'Detenido'
-    )
+  onTick((tick) => {
+    const mins = Math.floor(tick.elapsed / 60)
+    const secs = Math.floor(tick.elapsed % 60)
+    updateTrayTooltip(tick.running ? `${mins}m ${secs}s` : 'Detenido')
   })
 }
 
@@ -75,6 +78,17 @@ app.whenReady().then(() => {
   electronApp.setAppUserModelId('com.reloj.app')
   initDatabase()
   initSettings()
+
+  // Init session manager for hierarchical time tracking
+  const titleRules = getSettings()?.titleRules ?? {}
+  const rules = Object.keys(titleRules).length > 0 ? titleRules : getDefaultRules()
+  const cleanTitle = createTitleCleaner(rules)
+  initSessionManager(cleanTitle)
+
+  // Forward session ticks to renderer
+  onSessionTick((data) => {
+    sendToAllWindows('session:tick', data)
+  })
 
   app.on('browser-window-created', (_, window) => {
     optimizer.watchWindowShortcuts(window)
@@ -96,5 +110,7 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
   isQuitting = true
+  shutdownSessionManager()
+  stopHeartbeatWatcher()
   destroyTray()
 })

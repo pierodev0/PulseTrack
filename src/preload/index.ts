@@ -14,8 +14,12 @@ const api = {
 
   getCurrentTime: () => ipcRenderer.invoke('timer:get-time'),
 
-  saveSession: (data: { appName: string; duration: number }) =>
-    ipcRenderer.invoke('db:save', data),
+  lapTimer: () => ipcRenderer.invoke('timer:lap'),
+
+  renameLap: (lapIndex: number, label: string) =>
+    ipcRenderer.invoke('timer:rename-lap', lapIndex, label),
+
+  saveSession: (data: { appName: string; duration: number }) => ipcRenderer.invoke('db:save', data),
 
   getHistory: (limit?: number) => ipcRenderer.invoke('db:history', limit),
 
@@ -30,9 +34,23 @@ const api = {
 
   getPipStatus: () => ipcRenderer.invoke('pip:status'),
 
-  onTimerTick: (callback: (data: { elapsed: number; running: boolean }) => void) => {
-    const handler = (_event: Electron.IpcRendererEvent, data: { elapsed: number; running: boolean }) =>
-      callback(data)
+  onTimerTick: (
+    callback: (data: {
+      elapsed: number
+      running: boolean
+      lapCount: number
+      laps: Array<{ number: number; label: string; duration: number }>
+    }) => void
+  ) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      data: {
+        elapsed: number
+        running: boolean
+        lapCount: number
+        laps: Array<{ number: number; label: string; duration: number }>
+      }
+    ) => callback(data)
     ipcRenderer.on('timer:tick', handler)
     return () => {
       ipcRenderer.removeListener('timer:tick', handler)
@@ -65,6 +83,54 @@ const api = {
     ipcRenderer.on('mode:changed', handler)
     return () => {
       ipcRenderer.removeListener('mode:changed', handler)
+    }
+  },
+
+  startHeartbeat: (intervalMs?: number) => ipcRenderer.invoke('heartbeat:start', intervalMs),
+
+  stopHeartbeat: () => ipcRenderer.invoke('heartbeat:stop'),
+
+  getHeartbeatStatus: () => ipcRenderer.invoke('heartbeat:status'),
+
+  getHeartbeatStats: (from?: string, to?: string) =>
+    ipcRenderer.invoke('db:heartbeat-stats', from, to),
+
+  getHeartbeatTimeline: (from?: string, to?: string) =>
+    ipcRenderer.invoke('db:heartbeat-timeline', from, to),
+
+  onHeartbeatTick: (callback: (data: import('../main/heartbeat').HeartbeatTick) => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      data: import('../main/heartbeat').HeartbeatTick
+    ) => callback(data)
+    ipcRenderer.on('heartbeat:tick', handler)
+    return () => {
+      ipcRenderer.removeListener('heartbeat:tick', handler)
+    }
+  },
+
+  // Session tracking API
+  getActiveSession: () => ipcRenderer.invoke('session:get-active'),
+
+  getSessionList: (limit?: number, appName?: string) =>
+    ipcRenderer.invoke('session:list', limit, appName),
+
+  setSessionLabel: (appName: string, label: string) =>
+    ipcRenderer.invoke('session:set-label', appName, label),
+
+  getTitleRules: () => ipcRenderer.invoke('title-rules:get'),
+
+  setTitleRules: (rules: Record<string, import('../main/title-cleaner').TitleRule[]>) =>
+    ipcRenderer.invoke('title-rules:set', rules),
+
+  onSessionTick: (callback: (data: import('../main/session-manager').SessionTick) => void) => {
+    const handler = (
+      _event: Electron.IpcRendererEvent,
+      data: import('../main/session-manager').SessionTick
+    ) => callback(data)
+    ipcRenderer.on('session:tick', handler)
+    return () => {
+      ipcRenderer.removeListener('session:tick', handler)
     }
   }
 }

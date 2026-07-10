@@ -1,7 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte'
 
-  let { duration, onsave, onclose }: { duration: number; onsave: (d: number) => void; onclose: () => void } = $props()
+  let {
+    duration,
+    onsave,
+    onclose
+  }: { duration: number; onsave: (d: number) => void; onclose: () => void } = $props()
 
   let initDur = duration as number
   let hours = $state(Math.floor(initDur / 3600))

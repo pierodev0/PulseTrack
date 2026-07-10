@@ -74,14 +74,14 @@ El instalador va a quedar en la carpeta `dist/`.
 
 ## Tecnologías usadas
 
-| Tecnología | Para qué |
-|---|---|
-| [Electron](https://www.electronjs.org/) | Crea la ventana de la app de escritorio |
-| [Svelte 5](https://svelte.dev/) | Interfaz visual (botones, lista, temporizador) |
-| [TailwindCSS v4](https://tailwindcss.com/) | Diseño y estilos |
-| [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) | Base de datos local para guardar el historial |
-| [get-windows](https://github.com/sindresorhus/get-windows) | Detecta qué ventana está activa y lista las abiertas |
-| [electron-vite](https://electron-vite.org/) | Arma y compila todo junto |
+| Tecnología                                                   | Para qué                                             |
+| ------------------------------------------------------------ | ---------------------------------------------------- |
+| [Electron](https://www.electronjs.org/)                      | Crea la ventana de la app de escritorio              |
+| [Svelte 5](https://svelte.dev/)                              | Interfaz visual (botones, lista, temporizador)       |
+| [TailwindCSS v4](https://tailwindcss.com/)                   | Diseño y estilos                                     |
+| [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) | Base de datos local para guardar el historial        |
+| [get-windows](https://github.com/sindresorhus/get-windows)   | Detecta qué ventana está activa y lista las abiertas |
+| [electron-vite](https://electron-vite.org/)                  | Arma y compila todo junto                            |
 
 ---
 

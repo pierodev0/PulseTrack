@@ -1,15 +1,35 @@
 import { ipcMain } from 'electron'
 import { listOpenWindows } from './window-detector'
-import { startTimer, stopTimer, pauseTimer, resumeTimer, getTimerState, onTick } from './timer'
+import {
+  startTimer,
+  stopTimer,
+  pauseTimer,
+  resumeTimer,
+  getTimerState,
+  onTick,
+  lapTimer,
+  renameLap
+} from './timer'
 import {
   saveSession,
   getHistory,
   updateSession,
   deleteSession,
-  getStats
+  getStats,
+  getHeartbeatStats,
+  getHeartbeatTimeline,
+  getRecentSessions
 } from './database'
+import {
+  startHeartbeatWatcher,
+  stopHeartbeatWatcher,
+  isHeartbeatRunning,
+  onHeartbeat
+} from './heartbeat'
 import { togglePip, isPipActive, sendToAllWindows } from './pip'
 import { getSettings, setSettings } from './settings'
+import { getActiveSessionData, setManualLabel, setTitleCleaner } from './session-manager'
+import { createTitleCleaner, getDefaultRules } from './title-cleaner'
 
 export function registerIpcHandlers(): void {
   ipcMain.handle('get:active-apps', async () => {
@@ -22,17 +42,18 @@ export function registerIpcHandlers(): void {
   })
 
   ipcMain.handle('timer:stop', () => {
-    const state = getTimerState()
     const duration = stopTimer()
-    if (state.selectedApp) {
-      const session = saveSession(
-        state.selectedApp,
-        new Date().toISOString(),
-        duration
-      )
-      return { duration, session }
-    }
     return { duration, session: null }
+  })
+
+  ipcMain.handle('timer:lap', () => {
+    lapTimer()
+    return getTimerState()
+  })
+
+  ipcMain.handle('timer:rename-lap', (_event, lapIndex: number, label: string) => {
+    renameLap(lapIndex, label)
+    return { success: true }
   })
 
   ipcMain.handle('timer:pause', () => {
@@ -87,7 +108,66 @@ export function registerIpcHandlers(): void {
     return result
   })
 
-  onTick((elapsed, running) => {
-    sendToAllWindows('timer:tick', { elapsed, running })
+  ipcMain.handle('heartbeat:start', (_event, intervalMs?: number) => {
+    startHeartbeatWatcher(intervalMs)
+    return { running: isHeartbeatRunning() }
+  })
+
+  ipcMain.handle('heartbeat:stop', () => {
+    stopHeartbeatWatcher()
+    return { running: false }
+  })
+
+  ipcMain.handle('heartbeat:status', () => {
+    return { running: isHeartbeatRunning() }
+  })
+
+  ipcMain.handle('db:heartbeat-stats', (_event, from?: string, to?: string) => {
+    return getHeartbeatStats(from, to)
+  })
+
+  ipcMain.handle('db:heartbeat-timeline', (_event, from?: string, to?: string) => {
+    return getHeartbeatTimeline(from, to)
+  })
+
+  // Session handlers
+  ipcMain.handle('session:get-active', () => {
+    return getActiveSessionData()
+  })
+
+  ipcMain.handle('session:set-label', (_event, appName: string, label: string) => {
+    setManualLabel(appName, label)
+    return { success: true }
+  })
+
+  ipcMain.handle('session:list', (_event, limit?: number, appName?: string) => {
+    return getRecentSessions(limit, appName)
+  })
+
+  ipcMain.handle('session:stats', () => {
+    return getRecentSessions(50)
+  })
+
+  // Title rules handlers
+  ipcMain.handle('title-rules:get', () => {
+    return getSettings()?.titleRules ?? getDefaultRules()
+  })
+
+  ipcMain.handle(
+    'title-rules:set',
+    (_event, rules: Record<string, import('./title-cleaner').TitleRule[]>) => {
+      setSettings({ titleRules: rules })
+      const cleaner = createTitleCleaner(rules)
+      setTitleCleaner(cleaner)
+      return { success: true }
+    }
+  )
+
+  onTick((tick) => {
+    sendToAllWindows('timer:tick', tick)
+  })
+
+  onHeartbeat((data) => {
+    sendToAllWindows('heartbeat:tick', data)
   })
 }

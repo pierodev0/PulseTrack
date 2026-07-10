@@ -2,6 +2,8 @@ import { app } from 'electron'
 import { readFileSync, writeFileSync, existsSync } from 'fs'
 import { join } from 'path'
 
+import type { TitleRule } from './title-cleaner'
+
 export interface CustomColors {
   bg: string
   text: string
@@ -11,11 +13,13 @@ export interface CustomColors {
 export interface AppSettings {
   pipStyle: string
   customColors: CustomColors
+  titleRules: Record<string, TitleRule[]>
 }
 
 const defaults: AppSettings = {
   pipStyle: 'transparent',
-  customColors: { bg: '#1e1e2e', text: '#ffffff', border: '#334155' }
+  customColors: { bg: '#1e1e2e', text: '#ffffff', border: '#334155' },
+  titleRules: {}
 }
 
 let settings: AppSettings = { ...defaults }
